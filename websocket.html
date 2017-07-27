@@ -1,0 +1,62 @@
+1.认识html5的websocket 
+在html5规范中，websocket以替代ajax技术。这个新的api提供了一个方法，从客户端使用简单的语法有效地推动消息到服务器。可用于客户端，服务器端，还有个优秀的第三方api:Socket.IO.
+一、什么是WebSocket API?
+
+WebSocket API是下一代客户端-服务器的异步通信方法。该通信取代了单个的TCP套接字，使用ws或wss协议，可用于任意的客户端和服务器程序。WebSocket目前由W3C进行标准化。WebSocket已经受到Firefox 4、Chrome 4、Opera 10.70以及Safari 5等浏览器的支持。
+
+WebSocket API最伟大之处在于服务器和客户端可以在给定的时间范围内的任意时刻，相互推送信息。WebSocket并不限于以Ajax(或XHR)方式通信，因为Ajax技术需要客户端发起请求，而WebSocket服务器和客户端可以彼此相互推送信息；XHR受到域的限制，而WebSocket允许跨域通信。
+
+Ajax技术很聪明的一点是没有设计要使用的方式。WebSocket为指定目标创建，用于双向推送消息。
+二： websocket api 的使用
+只关注于客户端的api,因为每个服务器端语言有自己的api,先打开一个连接，为连接创建事件监听器，断开连接，消息时间，发送消息返回到服务器，关闭连接。
+//创建一个socket实例
+var socket = new WebSocket('ws://localhost:8080');
+//打开socket
+socket.onopen = function(event){
+	//发送一个初始化消息
+	socket.send('I am the client');
+	//监听消息
+	socket.onmessage = function(event){
+		console.log('client received a message',event);
+	};
+	//监听socket的关闭
+	socket.oncolse = function(event){
+		console.log('client notified socket has closed',event);
+	}
+	//关闭socket
+	socket.close()
+};
+
+参数是url,ws表示websocket协议。onopen，onclose,onmessage方法把事件连接到socket实例上。每个方法都提供了一个事件，以表示socket的状态。 onmessage事件提供了一个data属性，它可以包含消息的body部分，消息的body部分必须是一个字符串，可以进行序列化/反序列化操作，以便传递更多的数据。ie浏览器目前不支持websocket通信，如果你的客户端不支持websocket通信，有几个后备方案：
+1.flash技术 --- flash可以提供一个简单的替换，使用flash的缺点是并非所有客户端都安装了flash，而且iphone/ipad，不支持flash.
+2.ajax long-polling技术 --- 用ajax的long-polling来模拟websocket在业界有一段时间了。是一个可行的技术，但是不能优化发送的信息。是一个解决方案，但并不是一个最佳的技术方案。
+
+long-polling :长轮询 
+传统的轮询方式，客户端定时（一般使用setInterval）向服务器发送ajax请求，服务器接到接到请求后马上返回响应信息。使用这种方式，无论是客户端还是服务端都比较好实现，但还是会有很多无用的请求（服务器没有有效数据时，也需要返回通知客户端）；
+长轮询是客户端向服务器发送ajax请求，服务器接到请求后保持住连接，直到有新消息才返回响应信息，客户端处理完响应信息后再向服务器发送新的请求。这样的好处是，在没有数据的时候，客户端和服务器之间不会有无用的请求。
+对于使用长轮询的实现，客户端和服务端都有一定的要求：
+（1）客户端发起请求，当接收到服务器响应（正常或异常的响应）后，需要向服务器发送新的请求，从而达到轮询的效果
+（2）服务器端要能够一直保持住客户端的请求，直到有响应消息；同时服务器对请求的处理要支持非阻塞模式。
+实现：
+客户端利用ajax进行轮询请求，服务器端使用python的gevent库来实现了非阻塞式的响应
+
+function longPolling() {
+    $.ajax({
+        url: "update",
+        data: {"cursor": cursor},
+        type: "POST",
+        error: function (XMLHttpRequest, textStatus, errorThrown) {
+            $("#state").append("[state: " + textStatus + ", error: " + errorThrown + " ]<br/>");
+        },
+        success: function (result, textStatus) {
+            msg_data = eval("(" + result + ")");
+            $("#inbox").append(msg_data.html);
+            cursor = msg_data.latest_cursor;
+            console.log(msg_data)
+            $("#message").val("");
+            $("#state").append("[state: " + textStatus + " ]<br/>");
+        },
+        complete: longPolling
+    });
+}
+//注意Ajax请求的complete属性设置，每次当longPolling函数中的Ajax请求结束后，又会重新通过longPolling函数向服务器发出轮询请求。
