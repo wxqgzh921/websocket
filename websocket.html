@@ -59,4 +59,33 @@ function longPolling() {
         complete: longPolling
     });
 }
-//注意Ajax请求的complete属性设置，每次当longPolling函数中的Ajax请求结束后，又会重新通过longPolling函数向服务器发出轮询请求。
+注意Ajax请求的complete属性设置，每次当longPolling函数中的Ajax请求结束后，又会重新通过longPolling函数向服务器发出轮询请求。
+
+服务端：
+服务器端通过MessageBuffer类来维护了一个cache（用list实现），用来存放所有来自客户端的消息。当消息的数量超过cache_size的时候，服务器会清理掉早期的消息。
+
+三。带socket.io的websocket
+socket.io是Guillermo Rauch 创建的websocke api ,socket.io还提供了一个nodejs api
+创建客户端socket.io  将socket.io引入到页面上，然后就可以创建socket了
+var socket = new io.Socket('localhsot',{
+	port:8080
+});
+socket.connect();
+//添加一个连接监听器
+socket.on('connect',function(){
+	console.log('Client has connected to the server!'); 
+})
+//添加一个连接监听器
+socket.on('message',function(data){
+	console.log('Received a message from the server',data);
+})
+//添加一个关闭连接的监听器
+socket.on('disconnect',function(){
+	console.log('the client has disconnected')
+})
+//通过socket发送一条消息到服务器
+function sendMessageToServer(message){
+	socket.send(message);
+}
+socket.io简化了websocket api,统一了返回运输的api,传输包括：websocket;flash socket;ajax long-polling;ajax multipart streaming;iframe;jsonp polling;
+
